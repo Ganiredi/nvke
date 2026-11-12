@@ -695,6 +695,9 @@ func tenantSubtree(resolve managementResolver) func(spec testSpec) {
 					validateTenantGPURuntime(&test, gpuRuntime, tenantFailed)
 				}
 				validateTenant(laneTenantTarget(&test, tenantFailed), gpuRuntime.tenantSettings(laneTenantSettings, spec.shape, tenantWorkers))
+				if len(kapsBenchRunSpecs) > 0 {
+					validateTenantKapsBench(&test, tenantFailed)
+				}
 			}
 		})
 
