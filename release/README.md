@@ -343,7 +343,9 @@ nothing else.
 
 A stream can also carry **parameters**: the settings of its run, which are the
 environment file it runs against, the workers its tenant gets and the suite's
-timeout in minutes. They configure the run and nothing selects on them, which is
+timeout in minutes. `kapsBenchRunSpecs` also lists the kaps-bench run specs
+the suite runs on the tenant once its checks pass. They configure the run and
+nothing selects on them, which is
 why they are not capabilities. Only those fields are accepted, so a misspelled
 one is an error. The plan copies them for each stream and the stream's result
 records them.

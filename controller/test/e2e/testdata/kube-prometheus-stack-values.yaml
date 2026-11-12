@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Images come from public registries because a tenant holds no pull secret for a private one.
+grafana:
+  enabled: false
+alertmanager:
+  enabled: false
+
+prometheusOperator:
+  image:
+    registry: quay.io
+    repository: prometheus-operator/prometheus-operator
+    tag: v0.84.1
+  prometheusConfigReloader:
+    image:
+      registry: quay.io
+      repository: prometheus-operator/prometheus-config-reloader
+      tag: v0.84.1
+  # Operator TLS reads the certificate the webhook job makes, so both are off together.
+  admissionWebhooks:
+    enabled: false
+  tls:
+    enabled: false
+
+prometheus:
+  prometheusSpec:
+    image:
+      registry: quay.io
+      repository: prometheus/prometheus
+      tag: v3.5.0
+    retention: 6h
+    storageSpec: {}
+    # Scrape every ServiceMonitor and PodMonitor, not only this release's.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+kubelet:
+  enabled: true
+  serviceMonitor:
+    cAdvisor: true
+
+# A tenant's scheduler and controller manager listen on localhost only, so nothing can scrape them.
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+
+kube-state-metrics:
+  image:
+    registry: registry.k8s.io
+    repository: kube-state-metrics/kube-state-metrics
+    tag: v2.12.0
+
+prometheus-node-exporter:
+  image:
+    registry: quay.io
+    repository: prometheus/node-exporter
+    tag: v1.11.0

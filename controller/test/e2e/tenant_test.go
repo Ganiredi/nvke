@@ -682,6 +682,9 @@ func tenantSubtree(resolve managementResolver) func(spec testSpec) {
 			}
 			if spec.validate.tenantChecks {
 				validateTenant(laneTenantTarget(&test, func() bool { return failed }), laneTenantSettings)
+				if len(kapsBenchRunSpecs) > 0 {
+					validateTenantKapsBench(&test, func() bool { return failed })
+				}
 			}
 		})
 

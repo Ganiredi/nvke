@@ -108,9 +108,10 @@ spec:
     # machines only: the site node, the control plane and the workers all land
     # on its high memory CPU type. The tenant has three workers, and the suite
     # may run for 215 minutes, which the timeouts around it are derived from.
+    # Once the tenant checks pass, the suite runs kaps-bench's smoke run spec on it.
     - name: forge-cpu-amd64-ubuntu-24.04-kube-1.36-perf
       capabilities: {provider: forge, machineType: cpu, arch: amd64, ubuntu: "24.04", kube: "1.36", profile: perf}
-      parameters: {environment: forge-perf, tenantWorkers: 3, suiteTimeoutMinutes: 215}
+      parameters: {environment: forge-perf, tenantWorkers: 3, suiteTimeoutMinutes: 215, kapsBenchRunSpecs: [smoke/smoke.yaml]}
 
     # The DSX datahall, which is amd64 throughout. No gpu: the datahall
     # declares no GPU model, so a stream asking for an accelerator here

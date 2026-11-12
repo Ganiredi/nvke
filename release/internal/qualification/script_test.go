@@ -220,17 +220,19 @@ func TestStreamEnvEmitsTheStreamsParameters(t *testing.T) {
 		l := newSteps(t, sh, nil)
 		l.step(true, "stream-env", p, "", "forge-cpu-amd64-perf")
 		expect(t, l.values(), map[string]string{
-			"E2E_ENVIRONMENT":       "forge-perf",
-			"E2E_TENANT_WORKERS":    "3",
-			"SUITE_TIMEOUT_MINUTES": "215",
+			"E2E_ENVIRONMENT":          "forge-perf",
+			"E2E_TENANT_WORKERS":       "3",
+			"SUITE_TIMEOUT_MINUTES":    "215",
+			"E2E_KAPS_BENCH_RUN_SPECS": "smoke/smoke.yaml,netperf/hostnet-stream.yaml",
 		})
 
 		l = newSteps(t, sh, nil)
 		l.step(true, "stream-env", p, "", "forge-l40s-amd64")
 		expect(t, l.values(), map[string]string{
-			"E2E_ENVIRONMENT":       "",
-			"E2E_TENANT_WORKERS":    "",
-			"SUITE_TIMEOUT_MINUTES": "",
+			"E2E_ENVIRONMENT":          "",
+			"E2E_TENANT_WORKERS":       "",
+			"SUITE_TIMEOUT_MINUTES":    "",
+			"E2E_KAPS_BENCH_RUN_SPECS": "",
 		})
 	}
 }
@@ -548,7 +550,7 @@ func copiedScript(t *testing.T) string {
 
 // dryRun runs the run step as a dry run from the copy, with the values a run
 // step reads and the two a stream's parameters set.
-func dryRun(t *testing.T, sh, copied, workers, suite string) (string, error) {
+func dryRun(t *testing.T, sh, copied, workers, suite string, extra ...string) (string, error) {
 	t.Helper()
 	cmd := exec.CommandContext(t.Context(), sh, copied, "run")
 	cmd.Env = []string{
@@ -560,7 +562,9 @@ func dryRun(t *testing.T, sh, copied, workers, suite string) (string, error) {
 		"OS_IMAGE_VERSIONS=os-image-amd64=https://cdn.example/image-amd64.qcow2", "CAPABILITIES=arch=amd64",
 		"NVKE_CONTROLLER_NAMESPACE=", "NVKE_CONTROLLER_SERVICE=",
 		"E2E_TENANT_WORKERS=" + workers, "SUITE_TIMEOUT_MINUTES=" + suite,
+		"E2E_KAPS_BENCH_RUN_SPECS=", "E2E_KAPS_BENCH_DIR=",
 	}
+	cmd.Env = append(cmd.Env, extra...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -581,6 +585,43 @@ func TestRunDerivesTheTimeoutsAndPassesTheWorkers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, sh := range shells(t) {
 				out, err := dryRun(t, sh, copied, tc.workers, tc.suite)
+				if err != nil {
+					t.Fatalf("%s run: %v\n%s", sh, err, out)
+				}
+				for _, want := range tc.want {
+					if !strings.Contains(out, want) {
+						t.Errorf("%s run: output = %q, want %q in it", sh, out, want)
+					}
+				}
+				if tc.notWant != "" && strings.Contains(out, tc.notWant) {
+					t.Errorf("%s run: output = %q, want no %q in it", sh, out, tc.notWant)
+				}
+			}
+		})
+	}
+}
+
+// TestRunPassesTheKapsBenchSettings checks that a dry run shows the kaps-bench
+// flags only when they are set.
+func TestRunPassesTheKapsBenchSettings(t *testing.T) {
+	copied := copiedScript(t)
+	for _, tc := range []struct {
+		name    string
+		extra   []string
+		want    []string
+		notWant string
+	}{
+		{"a stream running no kaps-bench", nil, nil, "-e2e.kaps-bench"},
+		{
+			"a stream running two run specs",
+			[]string{"E2E_KAPS_BENCH_RUN_SPECS=smoke/smoke.yaml,netperf/hostnet-stream.yaml", "E2E_KAPS_BENCH_DIR=/opt/kaps-bench"},
+			[]string{"-e2e.kaps-bench-run-specs=smoke/smoke.yaml,netperf/hostnet-stream.yaml", "-e2e.kaps-bench-dir=/opt/kaps-bench"},
+			"",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, sh := range shells(t) {
+				out, err := dryRun(t, sh, copied, "", "", tc.extra...)
 				if err != nil {
 					t.Fatalf("%s run: %v\n%s", sh, err, out)
 				}

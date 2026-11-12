@@ -812,6 +812,15 @@ a broken site does not wait out every later check.
 In either lane the tenant gets one worker, or N with `-e2e.tenant-workers=N`,
 and the site lane's capacity check asks for the same N.
 
+To run kaps-bench on the tenant once its checks pass, put `kaps-bench` and
+`helm` on `PATH` and pass `-e2e.kaps-bench-run-specs=smoke/smoke.yaml` (a comma
+separated list) with `-e2e.kaps-bench-dir` set to the absolute path of the
+kaps-bench folder, which holds `bin`, `kpis`, `preflight`, `run-specs` and
+`workloads`. Allow the suite's machine to reach
+`https://prometheus-community.github.io/helm-charts` and the tenant's nodes to
+pull from `quay.io` and `registry.k8s.io`. Read the results from
+`kaps-bench-results.tar.gz` in this directory.
+
 Both lanes create the same `nico-forge` tenant and both entries carry that
 label, so pick between them with `site-controller`, which only the lane that
 builds a site carries. At `full` the site lane also registers one tenant entry

@@ -207,7 +207,7 @@ func TestParameters(t *testing.T) {
 		p    qualification.Parameters
 		want string
 	}{
-		{name: "every parameter, in a fixed order", p: qualification.Parameters{SuiteTimeoutMinutes: 215, TenantWorkers: 3, Environment: "forge-perf"}, want: "\nenvironment `forge-perf` · tenant workers `3` · suite timeout `215m`\n"},
+		{name: "every parameter, in a fixed order", p: qualification.Parameters{SuiteTimeoutMinutes: 215, TenantWorkers: 3, Environment: "forge-perf", KapsBenchRunSpecs: []string{"smoke/smoke.yaml", "netperf/hostnet-stream.yaml"}}, want: "\nenvironment `forge-perf` · tenant workers `3` · suite timeout `215m` · kaps-bench run specs `smoke/smoke.yaml,netperf/hostnet-stream.yaml`\n"},
 		{name: "one the stream does not set is left out", p: qualification.Parameters{TenantWorkers: 3}, want: "\ntenant workers `3`\n"},
 		{name: "none is nothing", p: qualification.Parameters{}, want: ""},
 	}

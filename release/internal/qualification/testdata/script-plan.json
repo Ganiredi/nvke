@@ -43,7 +43,7 @@
         {
           "name": "forge-cpu-amd64-perf",
           "capabilities": {"arch": "amd64", "machineType": "cpu", "profile": "perf", "provider": "forge"},
-          "parameters": {"environment": "forge-perf", "tenantWorkers": 3, "suiteTimeoutMinutes": 215},
+          "parameters": {"environment": "forge-perf", "tenantWorkers": 3, "suiteTimeoutMinutes": 215, "kapsBenchRunSpecs": ["smoke/smoke.yaml", "netperf/hostnet-stream.yaml"]},
           "dependencies": [
             {"name": "kube", "version": "v1.36.0"},
             {"name": "os-image-amd64", "version": "v0.4.0", "url": "https://cdn.example/image-amd64.qcow2"},

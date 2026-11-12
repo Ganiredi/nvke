@@ -296,6 +296,7 @@ names another.
 | `steps.env` | What each step resolved |
 | `e2e-config.yaml`, `site-inputs/` | The suite's config, and the archives the site was given |
 | diagnostics | On a failure, what the suite collected |
+| `kaps-bench-results.tar.gz` | For a stream that sets `kapsBenchRunSpecs`, kaps-bench's output dir from every run spec it ran |
 
 A run that fails once its stream is chosen still writes
 `qualify-result.json`, errored when the suite never wrote a report, as the
@@ -485,6 +486,7 @@ Teleport login on each are your own, plus the Forge API key, which is secret.
 | `docker` | Building the site images, and pulling them unless every one is built. The controller image cross-compiles for the site's architecture, which needs BuildKit (Docker Desktop's default). Building capi-provisioned for an architecture other than the host's also runs that architecture's binaries, which needs QEMU emulation: Docker Desktop has it, and on Linux install it with `docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64` | Yes |
 | `tsh` | Reaching the site's jump host through Teleport | Yes |
 | `oras` | Pulling nvkectl when it is not built | No; only that path needs it |
+| `kaps-bench`, `helm` | Installing Prometheus on the tenant and running the stream's `kapsBenchRunSpecs` on it | No; only a stream that sets `kapsBenchRunSpecs` needs them |
 
 #### Teleport
 
@@ -544,6 +546,7 @@ Planning needs `QUALIFY_E2E_NGC_ORG` whatever the registry, because
 | `QUALIFY_E2E_SITE_CONTROLLER_VERSION` | The plan's controller | The site controller version, in place of the one the plan names |
 | `SITE_DEPLOY_PATH_REF` | The controller's commit | The commit the deploy path is exported from |
 | `NVKE_CONTROLLER_NAMESPACE`, `NVKE_CONTROLLER_SERVICE` | `nvke-controller` | The name the controller is installed under. A release cut before the rename uses `nke-controller`. |
+| `E2E_KAPS_BENCH_DIR` | None | The absolute path of the kaps-bench folder, holding `bin`, `kpis`, `preflight`, `run-specs` and `workloads`, that the stream's `kapsBenchRunSpecs` run from. Set it for the perf stream. |
 
 ### How it stays the same run as CI
 
@@ -771,6 +774,9 @@ out. A stream can also carry
 the workers its tenant gets and the suite's timeout. The plan records them, and
 the stream's result says which it ran with. The job's timeout and the timeout of
 `go test` follow from the suite's, so they cannot be set to disagree.
+`kapsBenchRunSpecs` lists kaps-bench run specs, such as `smoke/smoke.yaml`, that
+the suite runs on the tenant once its checks pass, after installing Prometheus
+in `monitoring` with `helm`.
 
 ## Stages
 

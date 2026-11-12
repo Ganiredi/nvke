@@ -5,7 +5,9 @@ package qualification
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // Policy is release/policy.yaml: the matrix a release can be qualified
@@ -65,14 +67,18 @@ type Parameters struct {
 	// and tears the machines down. The timeouts around it are derived from
 	// this one, so they cannot be set to disagree.
 	SuiteTimeoutMinutes int `json:"suiteTimeoutMinutes,omitempty"`
+
+	// KapsBenchRunSpecs are the kaps-bench run specs the suite runs, in order,
+	// on the tenant once its checks pass.
+	KapsBenchRunSpecs []string `json:"kapsBenchRunSpecs,omitempty"`
 }
 
 // environmentName is what an environment file's name may be: the name of a
 // file beside the others, never a path.
 var environmentName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
-// validate rejects an environment that is not a file name and a count that is
-// negative.
+// validate rejects an environment that is not a file name, a count that is
+// negative and a run spec the suite's comma separated flag cannot carry.
 func (p Parameters) validate() error {
 	if p.Environment != "" && !environmentName.MatchString(p.Environment) {
 		return fmt.Errorf("environment %q is not an environment file's name", p.Environment)
@@ -82,6 +88,11 @@ func (p Parameters) validate() error {
 	}
 	if p.SuiteTimeoutMinutes < 0 {
 		return fmt.Errorf("suiteTimeoutMinutes is %d, which is not a duration", p.SuiteTimeoutMinutes)
+	}
+	for _, spec := range p.KapsBenchRunSpecs {
+		if !filepath.IsLocal(spec) || strings.Contains(spec, ",") {
+			return fmt.Errorf("kapsBenchRunSpecs entry %q is not a relative path under run-specs without a comma", spec)
+		}
 	}
 	return nil
 }

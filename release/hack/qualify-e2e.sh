@@ -99,7 +99,8 @@ inputs() {
     run)
       echo KEEP_SITE KEEP_TENANT DRY_RUN SITE_TENANT_EXCLUDE SITE_STAGE SITE_NVKE_CONTROLLER_VERSION CLI_VERSION \
         CAPI_PROVISIONED_VERSION OS_IMAGE_VERSIONS CAPABILITIES SITE_ENVIRONMENT \
-        NVKE_CONTROLLER_NAMESPACE NVKE_CONTROLLER_SERVICE E2E_TENANT_WORKERS SUITE_TIMEOUT_MINUTES
+        NVKE_CONTROLLER_NAMESPACE NVKE_CONTROLLER_SERVICE E2E_TENANT_WORKERS SUITE_TIMEOUT_MINUTES \
+        E2E_KAPS_BENCH_RUN_SPECS E2E_KAPS_BENCH_DIR
       ;;
   esac
 }
@@ -117,7 +118,7 @@ require_inputs() {
 # What the suite writes in its package directory, and the ones of them that
 # are text and so can carry a credential in an error message.
 artifacts=(qualify-e2e.log qualify-e2e.junit.xml qualify-e2e.report.json
-  nvkectl-diagnostics.tar.gz tenant-diagnostics.json site-cluster-state.txt)
+  nvkectl-diagnostics.tar.gz tenant-diagnostics.json site-cluster-state.txt kaps-bench-results.tar.gz)
 scrubbed=(qualify-e2e.log qualify-e2e.junit.xml qualify-e2e.report.json tenant-diagnostics.json site-cluster-state.txt)
 
 # One entry per stream of every combination. A stream's parameters are what
@@ -160,6 +161,7 @@ matrix_entries() {
           environment: ($s.parameters.environment // ""),
           tenant_workers: (($s.parameters.tenantWorkers // 0) | if . == 0 then "" else tostring end),
           suite_timeout_minutes: (($s.parameters.suiteTimeoutMinutes // 0) | if . == 0 then "" else tostring end),
+          kaps_bench_run_specs: (($s.parameters.kapsBenchRunSpecs // []) | join(",")),
           job_timeout_minutes: (($s.parameters.suiteTimeoutMinutes // $suite) + $overhead)
         }
     ]' "$1"
@@ -224,6 +226,7 @@ step_stream_env() {
   emit E2E_ENVIRONMENT "$(field environment)"
   emit E2E_TENANT_WORKERS "$(field tenant_workers)"
   emit SUITE_TIMEOUT_MINUTES "$(field suite_timeout_minutes)"
+  emit E2E_KAPS_BENCH_RUN_SPECS "$(field kaps_bench_run_specs)"
 }
 
 # nvkectl is a client of the controller it bootstraps, so the two have to agree
@@ -706,6 +709,9 @@ step_run() {
   fi
   local workers=()
   [ -z "${E2E_TENANT_WORKERS}" ] || workers=(-e2e.tenant-workers="${E2E_TENANT_WORKERS}")
+  local kaps_bench=()
+  [ -z "${E2E_KAPS_BENCH_RUN_SPECS}" ] || kaps_bench+=(-e2e.kaps-bench-run-specs="${E2E_KAPS_BENCH_RUN_SPECS}")
+  [ -z "${E2E_KAPS_BENCH_DIR}" ] || kaps_bench+=(-e2e.kaps-bench-dir="${E2E_KAPS_BENCH_DIR}")
   # -v so a green run keeps its output. Without it `go test` buffers a
   # passing package's stdout and throws it away, which is what run
   # 36033032946 did: the first successful bootstrap on hardware, and
@@ -748,6 +754,7 @@ step_run() {
       echo "  -e2e.versions=${versions}"
       echo "  -e2e.capabilities=${CAPABILITIES}"
       [ -z "${workers[*]:-}" ] || echo "  ${workers[*]}"
+      [ -z "${kaps_bench[*]:-}" ] || echo "  ${kaps_bench[*]}"
       echo "  -ginkgo.timeout=${ginkgo_timeout} -timeout ${go_timeout}"
       echo "  keep: ${keep[*]:-no}"
       echo "  keep tenants: ${KEEP_TENANT}"
@@ -768,7 +775,7 @@ step_run() {
     -e2e.site-stage="${SITE_STAGE}" \
     -e2e.versions="${versions}" \
     -e2e.capabilities="${CAPABILITIES}" \
-    ${keep[@]+"${keep[@]}"} ${workers[@]+"${workers[@]}"} 2>&1 | log_to qualify-e2e.log
+    ${keep[@]+"${keep[@]}"} ${workers[@]+"${workers[@]}"} ${kaps_bench[@]+"${kaps_bench[@]}"} 2>&1 | log_to qualify-e2e.log
 }
 
 # The suite names the jump host in its own errors ("not reachable
