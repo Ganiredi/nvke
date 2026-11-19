@@ -174,6 +174,8 @@ type tenantToolRun struct {
 	dir, kubeconfig, data, recipe string
 	// stopGrace is how long a canceled command has from SIGTERM to SIGKILL, aicrKillGrace when zero.
 	stopGrace time.Duration
+	// env is the NAME=value entries this run's commands get on top of the environment try builds.
+	env []string
 }
 
 func newAICRToolRun(ctx context.Context, test *tenantTest, plan tenantGPURuntimePlan, lifetime time.Duration) *tenantToolRun {
@@ -251,6 +253,7 @@ func (r *tenantToolRun) try(ctx context.Context, dir, name string, args ...strin
 		"TMPDIR=" + r.dir,
 		"KUBECONFIG=" + r.kubeconfig,
 	}
+	command.Env = append(command.Env, r.env...)
 	command.Stdout = io.MultiWriter(GinkgoWriter, out)
 	command.Stderr = command.Stdout
 	// deploy.sh starts helm and kubectl, which hold the output pipe. Killing

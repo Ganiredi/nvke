@@ -44,14 +44,15 @@ func TestFullStageSupported(t *testing.T) {
 	}
 }
 
-// The workflow seds the jump hosts, the SSA issuer and the DSX API hosts out of
-// the text files it uploads; the suite has to carry the same values into the
-// archives it writes, raw, without the trailing slash the workflow also strips,
-// and as the host alone.
+// The workflow seds the jump hosts, the SSA issuer, the DSX API hosts and the
+// OpenSearch endpoint out of the text files it uploads; the suite has to carry
+// the same values into the archives it writes, raw, without the trailing slash
+// the workflow also strips, and as the host alone.
 func TestWithheldFromEnvironment(t *testing.T) {
 	t.Setenv("FORGE_JUMP_HOST", "jump.example.test/")
 	t.Setenv("DSX_DATAHALL_1_JUMP_HOST", "10.1.2.3")
 	t.Setenv("SSA_ISSUER", "https://issuer.example.test/")
+	t.Setenv("KB_OPENSEARCH_URL", "https://opensearch.example.test:9200")
 	t.Setenv("DSX_DATAHALL_3_CA_CERT", "-----BEGIN CERTIFICATE-----\nhall3\n-----END CERTIFICATE-----\n")
 	t.Setenv("DSX_DATAHALL_3_API", "https://api.hall3.example.test:443/")
 	t.Setenv("DSX_DATAHALL_3_SITE_ID", "hall3-site-not-withheld")
@@ -60,13 +61,13 @@ func TestWithheldFromEnvironment(t *testing.T) {
 
 	values := withheldFromEnvironment()
 	got := strings.Join(values, "\n")
-	for _, want := range []string{"jump.example.test/", "10.1.2.3", "https://issuer.example.test/", "hall3\n-----END CERTIFICATE-----", "hunter2hunter2", "https://api.hall3.example.test:443/"} {
+	for _, want := range []string{"jump.example.test/", "10.1.2.3", "https://issuer.example.test/", "hall3\n-----END CERTIFICATE-----", "hunter2hunter2", "https://api.hall3.example.test:443/", "https://opensearch.example.test:9200"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("withheldFromEnvironment lacks %q:\n%s", want, got)
 		}
 	}
 	// Each derived form on its own, not as a substring of the raw value.
-	for _, form := range []string{"jump.example.test", "https://issuer.example.test", "https://api.hall3.example.test:443", "api.hall3.example.test", "issuer.example.test"} {
+	for _, form := range []string{"jump.example.test", "https://issuer.example.test", "https://api.hall3.example.test:443", "api.hall3.example.test", "issuer.example.test", "opensearch.example.test"} {
 		if !slices.Contains(values, form) {
 			t.Errorf("withheldFromEnvironment lacks %q on its own:\n%s", form, got)
 		}

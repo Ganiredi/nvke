@@ -1009,6 +1009,13 @@ Prometheus, whose images come from `quay.io` and `registry.k8s.io`, from
 Besides the `kaps-bench` binary and `run-specs`, the folder holds `bin/helm`. CI sets both
 flags for the perf stream, and the results land in
 `kaps-bench-results.tar.gz` in this directory.
+kaps-bench publishes its results to OpenSearch instead when the shell that runs the suite sets an endpoint:
+
+| Name | What it is |
+|---|---|
+| `KB_OPENSEARCH_URL` | OpenSearch endpoint. Secret. Empty keeps the results local. |
+| `KB_OPENSEARCH_USER`, `KB_OPENSEARCH_PASS` | Basic auth for the endpoint. Secret. |
+| `KB_OPENSEARCH_TOKEN` | A bearer token for the endpoint, in place of the user and password. Secret. |
 
 Both lanes create the same `nico-forge` tenant and both entries carry that
 label, so pick between them with `site-controller`, which only the lane that

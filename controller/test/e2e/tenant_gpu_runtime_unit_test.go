@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
 	"github.com/dsx-ai-factory/nvke/controller/test/e2e/internal/nvke"
@@ -363,6 +364,15 @@ func gnuTimeout(t *testing.T) string {
 	}
 	t.Skip("no GNU timeout on PATH, as timeout or gtimeout")
 	return ""
+}
+
+func TestToolRunPassesItsEnv(t *testing.T) {
+	t.Log("Doing: a failing command that prints a variable only the run's env sets")
+	dir := t.TempDir()
+	run := &tenantToolRun{dir: dir, env: []string{"KB_OPENSEARCH_URL=https://opensearch.example.test"}}
+	err := run.try(t.Context(), dir, "sh", "-c", `echo "url=${KB_OPENSEARCH_URL}"; exit 1`)
+	t.Log("Testing: the command sees the variable next to the environment try builds")
+	require.ErrorContains(t, err, "url=https://opensearch.example.test")
 }
 
 func TestAICRValidateResult(t *testing.T) {

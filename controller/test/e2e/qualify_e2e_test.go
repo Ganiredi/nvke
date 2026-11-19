@@ -58,9 +58,10 @@ const (
 )
 
 // withheldFromEnvironment is every value in the run's environment that must
-// not reach an artifact: the jump hosts, the SSA issuer and the DSX API hosts,
-// which the workflow's own step seds out of the text files it uploads, a
-// datahall's CA certificate, and the jump host password when a run uses one.
+// not reach an artifact: the jump hosts, the SSA issuer, the DSX API hosts and
+// the OpenSearch endpoint, which the workflow's own step seds out of the text
+// files it uploads, a datahall's CA certificate, and the jump host password
+// when a run uses one.
 // The archives the suite writes cannot be sed-ed, so the suite carries the
 // same list into its redaction. Each value raw, without a trailing slash and,
 // for a URL, as its host alone, as the workflow matches it.
@@ -73,7 +74,7 @@ func withheldFromEnvironment() []string {
 		}
 		dsxAPI := strings.HasPrefix(name, "DSX_") && strings.HasSuffix(name, "_API")
 		if !strings.HasSuffix(name, "_JUMP_HOST") && !strings.HasSuffix(name, "_CA_CERT") && !dsxAPI &&
-			name != "SSA_ISSUER" && name != envJumpHostPassword {
+			name != "SSA_ISSUER" && name != "KB_OPENSEARCH_URL" && name != envJumpHostPassword {
 			continue
 		}
 		values = append(values, value)

@@ -1512,6 +1512,14 @@ jobs:
           # suite reads it for a stream that runs against that environment and
           # ignores it for the others.
           FORGE_PERF_API_KEY: ${{ secrets.FORGE_PERF_API_KEY }}
+          # kaps-bench publishes its results to this OpenSearch endpoint with
+          # this credential. Only a stream with kaps-bench run specs gets them.
+          # Of the tools the suite runs with a built environment, only kaps-bench
+          # gets them, and an unset endpoint keeps the results local.
+          KB_OPENSEARCH_URL: ${{ matrix.kaps_bench_run_specs != '' && secrets.KB_OPENSEARCH_URL || '' }}
+          KB_OPENSEARCH_USER: ${{ matrix.kaps_bench_run_specs != '' && secrets.KB_OPENSEARCH_USER || '' }}
+          KB_OPENSEARCH_PASS: ${{ matrix.kaps_bench_run_specs != '' && secrets.KB_OPENSEARCH_PASS || '' }}
+          KB_OPENSEARCH_TOKEN: ${{ matrix.kaps_bench_run_specs != '' && secrets.KB_OPENSEARCH_TOKEN || '' }}
           # The DSX credential, scoped here for the same reason the Forge key
           # is: this is the only step that reads it, and a job-level secret is
           # one every step sees -- checkout, setup-go, docker login, the
@@ -1542,6 +1550,7 @@ jobs:
         shell: bash
         env:
           SSA_ISSUER: ${{ secrets.SSA_ISSUER }}
+          KB_OPENSEARCH_URL: ${{ matrix.kaps_bench_run_specs != '' && secrets.KB_OPENSEARCH_URL || '' }}
         run: release/hack/qualify-e2e.sh withhold
 
       # Writes qualify-result.json from this leg's plan entry and Ginkgo

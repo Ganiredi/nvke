@@ -69,7 +69,12 @@ func validateTenantKapsBench(test *tenantTest, failed func() bool) {
 			tools := newKapsBenchToolRun(ctx, test, i)
 			runCtx, cancel := context.WithDeadline(ctx, CurrentSpecReport().StartTime.Add(kapsBenchRunTimeout(i)))
 			defer cancel()
-			args := kapsBenchRunArgs(spec, tools.kubeconfig, filepath.Join(work, "cluster-context.yaml"), filepath.Join(work, "output"))
+			var publishTags []string
+			if os.Getenv("KB_OPENSEARCH_URL") != "" {
+				// Read only when publishing: a run against the kube context may name no controller version.
+				publishTags = kapsBenchTags(expectSucceed(requireVersion(versionController)), os.Getenv)
+			}
+			args := kapsBenchRunArgs(spec, tools.kubeconfig, filepath.Join(work, "cluster-context.yaml"), filepath.Join(work, "output"), publishTags)
 			binary := filepath.Join(kapsBenchDir, "kaps-bench")
 			Expect(tools.try(runCtx, kapsBenchDir, binary, args...)).To(Succeed(), "kaps-bench run spec %s should pass", spec)
 		}, labels, NodeTimeout(kapsBenchSpecTimeout(i)))
@@ -152,15 +157,35 @@ func requireKapsBenchTools(specs []string, dir string) error {
 	return errors.Join(errs...)
 }
 
-// kapsBenchRunArgs returns the arguments that run one run spec and keep its results in outputDir.
-func kapsBenchRunArgs(spec, kubeconfig, clusterContext, outputDir string) []string {
-	return []string{
+// kapsBenchRunArgs returns run arguments publishing to OpenSearch under publishTags, else locally.
+func kapsBenchRunArgs(spec, kubeconfig, clusterContext, outputDir string, publishTags []string) []string {
+	args := []string{
 		"run", spec,
 		"--kubeconfig", kubeconfig,
 		"--cluster-context", clusterContext,
 		"--output-dir", outputDir,
-		"--local-publisher",
 	}
+	if len(publishTags) == 0 {
+		return append(args, "--local-publisher")
+	}
+	for _, tag := range publishTags {
+		args = append(args, "--tags", tag)
+	}
+	return args
+}
+
+// kapsBenchTags returns a published run's tags, ci_job_url only inside a GitHub Actions run.
+func kapsBenchTags(release string, getenv func(string) string) []string {
+	var tags []string
+	server, repo, runID := getenv("GITHUB_SERVER_URL"), getenv("GITHUB_REPOSITORY"), getenv("GITHUB_RUN_ID")
+	if server != "" && repo != "" && runID != "" {
+		runURL := server + "/" + repo + "/actions/runs/" + runID
+		if attempt := getenv("GITHUB_RUN_ATTEMPT"); attempt != "" {
+			runURL += "/attempts/" + attempt
+		}
+		tags = append(tags, "ci_job_url="+runURL)
+	}
+	return append(tags, "release_version="+release, "release_source=nvke")
 }
 
 // kapsBenchClusterContext returns the cluster context kaps-bench records a tenant's runs under.
@@ -175,7 +200,22 @@ func newKapsBenchToolRun(ctx context.Context, test *tenantTest, index int) *tena
 	defer cancel()
 	run := newTenantToolRun(ctx, test, kapsBenchTokenLifetime(index), "kaps-bench admin token")
 	run.stopGrace = kapsBenchStopGrace
+	run.env = kapsBenchOpenSearchEnv(os.Getenv)
 	return run
+}
+
+// kapsBenchOpenSearchEnv returns the KB_OPENSEARCH_* settings that are set, nil with no endpoint.
+func kapsBenchOpenSearchEnv(getenv func(string) string) []string {
+	if getenv("KB_OPENSEARCH_URL") == "" {
+		return nil
+	}
+	var env []string
+	for _, name := range []string{"KB_OPENSEARCH_URL", "KB_OPENSEARCH_USER", "KB_OPENSEARCH_PASS", "KB_OPENSEARCH_TOKEN"} {
+		if value := getenv(name); value != "" {
+			env = append(env, name+"="+value)
+		}
+	}
+	return env
 }
 
 // kapsBenchSpecTimeout returns run spec index's time limit; the first one also installs Prometheus.
